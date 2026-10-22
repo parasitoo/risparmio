@@ -1,8 +1,10 @@
-const CACHE = "risparmio-v1";
+const CACHE = "risparmio-v2";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
+  e.waitUntil(caches.open(CACHE).then(c =>
+    Promise.all(FILES.map(u => fetch(u, { cache: "reload" }).then(r => r.ok && c.put(u, r)).catch(() => {})))
+  ));
   self.skipWaiting();
 });
 
@@ -11,16 +13,24 @@ self.addEventListener("activate", e => {
   self.clients.claim();
 });
 
-// risponde subito dalla memoria del telefono; se c'è rete, aggiorna la copia in background
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(cached => {
-      const network = fetch(e.request).then(res => {
-        if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
-  );
+  const url = new URL(e.request.url);
+  const isPage = e.request.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+
+  if (isPage) {
+    // pagina: prima la rete (versione sempre aggiornata), senza rete la copia salvata
+    e.respondWith(
+      fetch(url.href, { cache: "no-store" })
+        .then(res => {
+          if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); }
+          return res;
+        })
+        .catch(() => caches.match("./index.html").then(r => r || caches.match("./")))
+    );
+    return;
+  }
+
+  // icone e manifest: prima la copia salvata, poi la rete
+  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(r => r || fetch(e.request)));
 });
