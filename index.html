@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Risparmio</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Risparmio">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121715" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --fg:#1b2420; --muted:#5d6a63; --line:#d9dfdb;
+  --accent:#0f6b58; --accent-soft:#e1efe9; --plan:#8a968f; --warn:#a4560c; --good:#2c7a3f;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121715; --surface:#1a211e; --fg:#e4ebe7; --muted:#97a69e; --line:#2c3632;
+  --accent:#4fc2a3; --accent-soft:#1d332c; --plan:#6f7d76; --warn:#e3a35c; --good:#6ccf84; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+main{max-width:560px;margin:0 auto;padding-top:calc(env(safe-area-inset-top,0px) + 20px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 32px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:2px 0 0;font-size:13.5px}
+.num{font-variant-numeric:tabular-nums}
+.progress{display:flex;flex-direction:column;gap:8px}
+.progress .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.big{font-size:28px;font-weight:600;color:var(--accent)}
+.of{color:var(--muted);font-size:14px}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;position:relative}
+.bar i,.bar b{position:absolute;top:0;bottom:0;left:0;border-radius:5px;background:var(--accent)}
+.bar b{opacity:.25}
+.proj{font-size:13.5px;color:var(--muted)}
+.tabs{display:grid;grid-template-columns:repeat(9,1fr);gap:6px}
+.tab{font:inherit;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 2px 7px;color:var(--fg);display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;cursor:pointer}
+.tab .t{font-weight:600;font-size:14px}
+.tab .a{font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tab.done .a{color:var(--good)}
+.tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.panel h2{margin:0;font-size:17px;font-weight:600}
+.rows{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center}
+.k{color:var(--muted)}
+.v{text-align:right}
+.inrow{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+input{width:120px;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;text-align:right;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);-webkit-appearance:none;appearance:none}
+input::placeholder{color:var(--plan)}
+.use{font:inherit;font-size:13px;background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:2px;white-space:nowrap;cursor:pointer}
+.cons{color:var(--accent);font-weight:600}
+.sep{grid-column:1/-1;border-top:1px solid var(--line);margin:2px 0}
+.left.v{font-size:20px;font-weight:600}
+.neg{color:var(--warn)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:520px){.tabs{grid-template-columns:repeat(5,1fr)}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+(function(){
+const ENTRATA=1100, USCITE=250, ABB=40.99, CUSC=200, KEY="risparmio-v1";
+const MESI=[
+ {k:"2026-10",ab:"ott",nome:"ottobre 2026",rate:516.94,rataRes:0,base:1453.53,spese:200,lab:"saldo al 21/10"},
+ {k:"2026-11",ab:"nov",nome:"novembre 2026",rate:240.72,rataRes:0},
+ {k:"2026-12",ab:"dic",nome:"dicembre 2026",rate:240.95,rataRes:0},
+ {k:"2027-01",ab:"gen",nome:"gennaio 2027",rate:197.67,rataRes:0},
+ {k:"2027-02",ab:"feb",nome:"febbraio 2027",rate:197.67,rataRes:0},
+ {k:"2027-03",ab:"mar",nome:"marzo 2027",rate:197.67,rataRes:0},
+ {k:"2027-04",ab:"apr",nome:"aprile 2027",rate:0,rataRes:45.99},
+ {k:"2027-05",ab:"mag",nome:"maggio 2027",rate:0,rataRes:45.99},
+ {k:"2027-06",ab:"giu",nome:"giugno 2027",rate:0,rataRes:45.99}
+];
+MESI.forEach(m=>{m.fisse=Math.round((m.rate+m.rataRes+ABB)*100)/100; m.imp=Math.round((m.fisse+CUSC)*100)/100; m.base=m.base||ENTRATA+CUSC; m.spese=m.spese||USCITE; m.lab=m.lab||"saldo al 15"});
+
+let state={versato:{},saldo:{}};
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null"); if(s&&typeof s==="object"){state.versato=s.versato||{};state.saldo=s.saldo||{}}}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(()=>{})}
+
+const r2=n=>Math.round(n*100)/100;
+const fmt=n=>r2(n).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const fmt0=n=>Math.round(n).toLocaleString("it-IT")+" €";
+const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+const consOf=(entr,m)=>{const bl=m.base-m.imp, lib=entr-m.imp; if(lib<=0||bl<=0) return 0; const quota=Math.max(0,(bl-m.spese)/bl); return Math.max(0,Math.floor(lib*quota/10+1e-9)*10)};
+const $=id=>document.getElementById(id);
+let selK=(MESI.find(m=>!has(state.versato,m.k))||MESI[MESI.length-1]).k;
+
+function calc(){
+  const r=MESI.map(m=>{
+    const entr=has(state.saldo,m.k)?Number(state.saldo[m.k]):m.base;
+    const cons=consOf(entr,m), baseCons=consOf(m.base,m);
+    const vsSet=has(state.versato,m.k), vs=vsSet?Number(state.versato[m.k]):0;
+    return {...m,entr,cons,baseCons,vs,vsSet,resta:r2(entr-m.imp-(vsSet?vs:cons))};
+  });
+  return {r,
+    versato:r.reduce((s,x)=>s+x.vs,0),
+    obiettivo:r.reduce((s,x)=>s+x.baseCons,0),
+    proj:r.reduce((s,x)=>s+(x.vsSet?x.vs:x.cons),0)};
+}
+
+function shell(){
+  $("app").innerHTML=`
+  <header>
+    <h1>Risparmio</h1>
+    <p class="sub">ottobre 2026 – giugno 2027</p>
+  </header>
+  <section class="progress">
+    <div class="top"><span class="big num" id="p-real"></span><span class="of num" id="p-goal"></span></div>
+    <div class="bar" aria-hidden="true"><b id="p-projbar"></b><i id="p-bar"></i></div>
+    <span class="proj num" id="p-proj"></span>
+  </section>
+  <nav class="tabs" role="tablist" aria-label="mesi">${MESI.map(m=>`
+    <button type="button" class="tab" role="tab" id="tab-${m.k}" data-k="${m.k}"><span class="t">${m.ab}</span><span class="a" id="tab-a-${m.k}"></span></button>`).join("")}
+  </nav>
+  <section class="panel" role="tabpanel">
+    <h2 id="pn-title"></h2>
+    <div class="rows">
+      <label class="k" for="pn-saldo" id="pn-saldo-l">saldo</label><span class="inrow"><input type="text" id="pn-saldo" data-f="saldo" inputmode="decimal" autocomplete="off"></span>
+      <span class="k">uscite fisse</span><span class="v num" id="pn-fisse"></span>
+      <span class="k">cuscinetto</span><span class="v num" id="pn-cusc"></span>
+      <span class="k">consigliato</span><span class="v num cons" id="pn-cons"></span>
+      <label class="k" for="pn-versato">versato</label><span class="inrow"><button type="button" class="use" id="pn-use">= consigliato</button><input type="text" id="pn-versato" data-f="versato" inputmode="decimal" autocomplete="off"></span>
+      <span class="sep"></span>
+      <span class="k">ti resta</span><span class="v num left" id="pn-left"></span>
+    </div>
+  </section>`;
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{selK=t.dataset.k;fillPanel();update()}));
+  ["saldo","versato"].forEach(f=>$("pn-"+f).addEventListener("input",e=>{
+    let raw=String(e.target.value).trim().replace(/\s|€/g,"");
+    if(raw.includes(",")) raw=raw.replace(/\./g,"").replace(",",".");
+    const v=parseFloat(raw);
+    if(raw===""||isNaN(v)) delete state[f][selK]; else state[f][selK]=r2(v);
+    persist(); update();
+  }));
+  $("pn-use").addEventListener("click",()=>{
+    const x=calc().r.find(z=>z.k===selK);
+    state.versato[selK]=x.cons; persist(); fillPanel(); update();
+  });
+}
+
+function fillPanel(){
+  ["saldo","versato"].forEach(f=>{$("pn-"+f).value=has(state[f],selK)?String(state[f][selK]).replace(".",","):""});
+}
+
+function update(){
+  const c=calc();
+  $("p-real").textContent=fmt(c.versato);
+  $("p-goal").textContent="di "+fmt0(c.obiettivo);
+  $("p-bar").style.width=Math.min(100,c.versato/c.obiettivo*100).toFixed(1)+"%";
+  $("p-projbar").style.width=Math.min(100,c.proj/c.obiettivo*100).toFixed(1)+"%";
+  $("p-proj").textContent="proiezione a giugno "+fmt0(c.proj);
+  c.r.forEach(x=>{
+    const t=$("tab-"+x.k);
+    t.setAttribute("aria-selected",x.k===selK?"true":"false");
+    t.classList.toggle("done",x.vsSet);
+    $("tab-a-"+x.k).textContent=x.vsSet?fmt0(x.vs):"—";
+  });
+  const x=c.r.find(z=>z.k===selK);
+  $("pn-title").textContent=x.nome;
+  $("pn-saldo-l").textContent=x.lab;
+  $("pn-saldo").placeholder=fmt(x.base).replace(" €","");
+  $("pn-fisse").textContent=fmt(x.fisse);
+  $("pn-cusc").textContent=fmt(CUSC);
+  $("pn-cons").textContent=fmt(x.cons);
+  $("pn-versato").placeholder=String(x.cons);
+  $("pn-left").textContent=fmt(x.resta);
+  $("pn-left").className="v num left"+(x.resta<0?" neg":"");
+}
+
+shell(); fillPanel(); update();
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+})();
+</script>
+</body>
+</html>
